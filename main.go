@@ -23,6 +23,21 @@ func initLocalNode() node {
   return n
 }
 
+func handleIncomingConn(n node, conn *yggdrasil.Conn) {
+  buf := make([]byte, 65535)
+  count, err := conn.Read(buf)
+  if err != nil {
+    n.log.Errorln("Error reading incoming .")
+  } else {
+    n.log.Println("Read", count, "bytes from incoming connection.")
+  }
+
+  err = conn.Close()
+  if err != nil {
+    n.log.Errorln("Error closing connection.")
+  }
+}
+
 func main() {
   var err error
 
@@ -50,21 +65,22 @@ func main() {
 
   n.log.Println("Local address ", n.core.Address().String())
 
-  // Listen for incoming events
+  // Accept incoming transmissions.
   listener, err := n.core.ConnListen()
   if err != nil {
     n.log.Errorln("An error occured setting up the Yggdrasil listener.")
     panic(err)
   }
 
+  // Handle/serve incoming transmissions.
   for {
+    n.log.Println("Waiting for incoming transmission...")
     conn, err := listener.Accept()
     if err != nil {
-      n.log.Errorln("An error occured on incoming connection.")
+      n.log.Errorln("An error occured on incoming transmission.")
       panic(err)
     }
 
-    n.log.Println("New connection!")
-    _ = conn
+   go handleIncomingConn(n, conn)
   }
 }
