@@ -30,6 +30,7 @@ func handleIncomingConn(n node, conn *yggdrasil.Conn) {
     n.log.Errorln("Error reading incoming .")
   } else {
     n.log.Println("Read", count, "bytes from incoming connection.")
+    // TODO: Serve HTTP requests to toy client.
   }
 
   err = conn.Close()
