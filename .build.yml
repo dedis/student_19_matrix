@@ -3,6 +3,9 @@ packages:
   - golang-bin
 sources:
   - https://git.sr.ht/~fnux/yggdrasil-toy-nodes
+environment:
+  GOPATH: /tmp/go
+  GOBIN: /tmp/go/bin
 tasks:
   - build: |
       cd yggdrasil-toy-nodes
