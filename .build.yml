@@ -1,0 +1,11 @@
+image: fedora/latest
+packages:
+  - golang-bin
+sources:
+  - https://git.sr.ht/~fnux/yggdrasil-toy-nodes
+tasks:
+  - build: |
+      cd yggdrasil-toy-nodes
+      make getDeps
+      make client
+      make server
