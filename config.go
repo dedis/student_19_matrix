@@ -15,7 +15,7 @@ import (
 // README: Most of this code comes from:
 // https://github.com/yggdrasil-network/yggdrasil-go/blob/master/cmd/yggdrasil/main.go
 
-func readConfig(useconf *bool, useconffile *string, normaliseconf *bool) *config.NodeConfig {
+func ReadConfig(useconf *bool, useconffile *string, normaliseconf *bool) *config.NodeConfig {
 	// Use a configuration file. If -useconf, the configuration will be read
 	// from stdin. If -useconffile, the configuration will be read from the
 	// filesystem.
@@ -92,7 +92,7 @@ func readConfig(useconf *bool, useconffile *string, normaliseconf *bool) *config
 
 // Generates a new configuration and returns it in HJSON format. This is used
 // with -genconf.
-func doGenconf(isjson bool) string {
+func DoGenconf(isjson bool) string {
 	cfg := config.GenerateConfig()
 	var bs []byte
 	var err error

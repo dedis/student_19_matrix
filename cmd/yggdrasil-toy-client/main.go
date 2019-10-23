@@ -15,7 +15,7 @@ import (
 	coap "github.com/Fnux/go-coap"
 	coapNet "github.com/Fnux/go-coap/net"
 
-	_ "git.sr.ht/~fnux/yggdrasil-toy-nodes"
+	toyNodes "git.sr.ht/~fnux/yggdrasil-toy-nodes"
 )
 
 func main() {
@@ -35,7 +35,7 @@ func main() {
 	switch {
 	case *useconffile != "" || *useconf:
 		// Read the configuration from either stdin or from the filesystem
-		cfg = readConfig(useconf, useconffile, normaliseconf)
+		cfg = toyNodes.ReadConfig(useconf, useconffile, normaliseconf)
 		// If the -normaliseconf option was specified then remarshal the above
 		// configuration and print it back to stdout. This lets the user update
 		// their configuration file with newly mapped names (like above) or to
@@ -55,7 +55,7 @@ func main() {
 		}
 	case *genconf:
 		// Generate a new configuration and print it to stdout.
-		fmt.Println(doGenconf(*confjson))
+		fmt.Println(toyNodes.DoGenconf(*confjson))
 	default:
 		flag.PrintDefaults()
 		return
