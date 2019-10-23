@@ -14,7 +14,6 @@ import (
 
 	coap "github.com/Fnux/go-coap"
 	coapNet "github.com/Fnux/go-coap/net"
-
 	toyNodes "git.sr.ht/~fnux/yggdrasil-toy-nodes"
 )
 

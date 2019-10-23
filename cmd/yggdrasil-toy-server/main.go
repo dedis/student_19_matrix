@@ -1,31 +1,21 @@
 package main
 
 import (
-  "os"
-  "time"
-  "context"
-  "github.com/gologme/log"
-  "github.com/yggdrasil-network/yggdrasil-go/src/config"
-  "github.com/yggdrasil-network/yggdrasil-go/src/yggdrasil"
-  coap "github.com/Fnux/go-coap"
-  coapNet "github.com/Fnux/go-coap/net"
+	"context"
+	"encoding/json"
+	"flag"
+	"fmt"
+	"os"
+	"time"
+
+	"github.com/gologme/log"
+	"github.com/hjson/hjson-go"
+	"github.com/yggdrasil-network/yggdrasil-go/src/config"
+
+	coap "github.com/Fnux/go-coap"
+	coapNet "github.com/Fnux/go-coap/net"
+	toyNodes "git.sr.ht/~fnux/yggdrasil-toy-nodes"
 )
-
-// Defines an Yggdrasil node.
-type node struct {
-  core   yggdrasil.Core
-  config *config.NodeConfig
-  state  *config.NodeState
-  log    *log.Logger
-}
-
-func initLocalNode() node {
-  n := node{}
-  n.log = log.New(os.Stdout, "", log.Flags())
-  n.config = config.GenerateConfig()
-
-  return n
-}
 
 func handleA(w coap.ResponseWriter, req *coap.Request) {
 	log.Printf("Got message in handleA: path=%q: %#v from %v", req.Msg.Path(), req.Msg, req.Client.RemoteAddr())
@@ -38,76 +28,74 @@ func handleA(w coap.ResponseWriter, req *coap.Request) {
 	}
 }
 
-/*
-func handleIncomingConn(n node, conn *yggdrasil.Conn) {
-  buf := make([]byte, 65535)
-  count, err := conn.Read(buf)
-  if err != nil {
-    n.log.Errorln("Error reading incoming .")
-  } else {
-    n.log.Println("Read", count, "bytes from incoming connection.")
-    // TODO: Serve HTTP requests to toy client.
-  }
-
-  err = conn.Close()
-  if err != nil {
-    n.log.Errorln("Error closing connection.")
-  }
-}
-*/
-
 func main() {
-  var err error
+	// Handle command-line parameters
+	genconf := flag.Bool("genconf", false, "print a new config to stdout")
+	useconf := flag.Bool("useconf", false, "read HJSON/JSON config from stdin")
+	useconffile := flag.String("useconffile", "", "read HJSON/JSON config from specified file path")
+	normaliseconf := flag.Bool("normaliseconf", false, "use in combination with either -useconf or -useconffile, outputs your configuration normalised")
+	confjson := flag.Bool("json", false, "print configuration from -genconf or -normaliseconf as JSON instead of HJSON")
+	flag.Parse()
 
-  // Initialize local Yggdrasil node.
-  n := initLocalNode()
+	var cfg *config.NodeConfig
+	var state *config.NodeState
+	var logger *log.Logger
+	var err error
 
-  // Start node.
-  n.log.Println("Starting Yggdrasil node.")
-  n.state, err = n.core.Start(n.config, n.log)
-  if err != nil {
-    n.log.Errorln("An error occurred during startup")
-    panic(err)
-  }
+	switch {
+	case *useconffile != "" || *useconf:
+		// Read the configuration from either stdin or from the filesystem
+		cfg = toyNodes.ReadConfig(useconf, useconffile, normaliseconf)
+		// If the -normaliseconf option was specified then remarshal the above
+		// configuration and print it back to stdout. This lets the user update
+		// their configuration file with newly mapped names (like above) or to
+		// convert from plain JSON to commented HJSON.
+		if *normaliseconf {
+			var bs []byte
+			if *confjson {
+				bs, err = json.MarshalIndent(cfg, "", "  ")
+			} else {
+				bs, err = hjson.Marshal(cfg)
+			}
+			if err != nil {
+				panic(err)
+			}
+			fmt.Println(string(bs))
+			return
+		}
+	case *genconf:
+		// Generate a new configuration and print it to stdout.
+		fmt.Println(toyNodes.DoGenconf(*confjson))
+		return
+	default:
+		flag.PrintDefaults()
+		return
+	}
 
-  // Log some basic informations.
-  n.log.Println("My node ID is", n.core.NodeID())
-  n.log.Println("My public key is", n.core.EncryptionPublicKey())
-  n.log.Println("My coords are", n.core.Coords())
+	// Initialize logger
+	logger = log.New(os.Stdout, "", log.Flags())
 
-  // Connect to the global Yggdrasil network.
-  n.log.Println("Connecting to global Network.")
-  // -- From https://github.com/yggdrasil-network/public-peers
-  swissBayPeer := "tcp://77.56.134.244:34962"
-  n.core.AddPeer(swissBayPeer, "")
+	// Initialize Yggdrasil node
+	node := coapNet.YggdrasilNode{
+		Config: cfg,
+	}
+	state, err = node.Core.Start(node.Config, logger)
+	if err != nil {
+		logger.Errorln("An error occurred during Yggdrasil node startup.")
+		panic(err)
+	}
 
-  n.log.Println("Local address ", n.core.Address().String())
+	// Ignore state
+	_ = state
 
-  /*
-  // Accept incoming transmissions.
-  listener, err := n.core.ConnListen()
-  if err != nil {
-    n.log.Errorln("An error occured setting up the Yggdrasil listener.")
-    panic(err)
-  }
+	// Log some basic informations.
+	logger.Println("My node ID is", node.Core.NodeID())
+	logger.Println("My public key is", node.Core.EncryptionPublicKey())
+	logger.Println("My coords are", node.Core.Coords())
+	logger.Println("Local address ", node.Core.Address().String())
 
-  // Handle/serve incoming transmissions.
-  for {
-    n.log.Println("Waiting for incoming transmission...")
-    conn, err := listener.Accept()
-    if err != nil {
-      n.log.Errorln("An error occured on incoming transmission.")
-      panic(err)
-    }
-
-   go handleIncomingConn(n, conn)
-  }
-  */
-
-  // Coap Server
-  mux := coap.NewServeMux()
+	// Launch Coap Server
+	mux := coap.NewServeMux()
 	mux.Handle("/a", coap.HandlerFunc(handleA))
-
-	yggdrasilCoapNode := coapNet.YggdrasilNode{ Core: n.core, Config: n.config }
-	log.Fatal(coap.ListenAndServeYggdrasil(yggdrasilCoapNode, mux))
+	logger.Fatal(coap.ListenAndServeYggdrasil(node, mux))
 }
