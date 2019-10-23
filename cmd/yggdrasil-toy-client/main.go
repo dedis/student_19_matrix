@@ -56,6 +56,7 @@ func main() {
 	case *genconf:
 		// Generate a new configuration and print it to stdout.
 		fmt.Println(toyNodes.DoGenconf(*confjson))
+		return
 	default:
 		flag.PrintDefaults()
 		return
