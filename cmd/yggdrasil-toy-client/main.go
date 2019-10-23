@@ -24,6 +24,7 @@ func main() {
 	useconffile := flag.String("useconffile", "", "read HJSON/JSON config from specified file path")
 	normaliseconf := flag.Bool("normaliseconf", false, "use in combination with either -useconf or -useconffile, outputs your configuration normalised")
 	confjson := flag.Bool("json", false, "print configuration from -genconf or -normaliseconf as JSON instead of HJSON")
+	targetAddr := flag.String("target", "", "Yggdrasil address to contact")
 	flag.Parse()
 
 	var cfg *config.NodeConfig
@@ -32,6 +33,9 @@ func main() {
 	var err error
 
 	switch {
+	case *targetAddr == "":
+		fmt.Println("Target flag is required.")
+		return
 	case *useconffile != "" || *useconf:
 		// Read the configuration from either stdin or from the filesystem
 		cfg = toyNodes.ReadConfig(useconf, useconffile, normaliseconf)
@@ -78,14 +82,14 @@ func main() {
 	_ = state
 
 	// Log some basic informations.
-	logger.Println("My node ID is", node.Core.NodeID())
-	logger.Println("My public key is", node.Core.EncryptionPublicKey())
-	logger.Println("My coords are", node.Core.Coords())
-	logger.Println("Local address ", node.Core.Address().String())
+	logger.Println("My node ID is:", node.Core.NodeID())
+	logger.Println("My public key is:", node.Core.EncryptionPublicKey())
+	logger.Println("My coords are:", node.Core.Coords())
+	logger.Println("Local address:", node.Core.Address().String())
+	logger.Println("Target address:", *targetAddr)
 
 	// TODO: cleanup below this comment!
-	target := "303:60d4:3d32:a2b9::4" // Some kind of yggdrasil-enabled forum
-	co, err := coap.DialYggdrasil(node, target)
+	co, err := coap.DialYggdrasil(node, *targetAddr)
 	if err != nil {
 		log.Fatalf("Error dialing: %v", err)
 	}
