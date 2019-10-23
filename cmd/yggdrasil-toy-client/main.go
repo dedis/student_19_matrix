@@ -74,6 +74,9 @@ func main() {
 		panic(err)
 	}
 
+	// Ignore state
+	_ = state
+
 	// Log some basic informations.
 	logger.Println("My node ID is", node.Core.NodeID())
 	logger.Println("My public key is", node.Core.EncryptionPublicKey())
