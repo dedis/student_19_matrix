@@ -2,9 +2,14 @@ package main
 
 import (
   "os"
+  "time"
+  "context"
   "github.com/gologme/log"
   "github.com/yggdrasil-network/yggdrasil-go/src/config"
   "github.com/yggdrasil-network/yggdrasil-go/src/yggdrasil"
+
+  coap "github.com/Fnux/go-coap"
+  coapNet "github.com/Fnux/go-coap/net"
 )
 
 // Defines an Yggdrasil node.
@@ -21,21 +26,6 @@ func initLocalNode() node {
   n.config = config.GenerateConfig()
 
   return n
-}
-
-func handleIncomingConn(n node, conn *yggdrasil.Conn) {
-  buf := make([]byte, 65535)
-  count, err := conn.Read(buf)
-  if err != nil {
-    n.log.Errorln("Error reading incoming .")
-  } else {
-    n.log.Println("Read", count, "bytes from incoming connection.")
-  }
-
-  err = conn.Close()
-  if err != nil {
-    n.log.Errorln("Error closing connection.")
-  }
 }
 
 func main() {
@@ -66,5 +56,24 @@ func main() {
   n.log.Println("Local address ", n.core.Address().String())
 
   // TODO: Send HTTP query to toy server
-  n.log.Println("Pouik!")
+  target := "303:60d4:3d32:a2b9::4" // Some kind of yggdrasil-enabled forum
+
+	yggdrasilCoapNode := coapNet.YggdrasilNode{ Core: n.core, Config: n.config }
+	co, err := coap.DialYggdrasil(yggdrasilCoapNode, target)
+	if err != nil {
+		log.Fatalf("Error dialing: %v", err)
+	}
+	path := "/a"
+	if len(os.Args) > 1 {
+		path = os.Args[1]
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	resp, err := co.GetWithContext(ctx, path)
+
+	if err != nil {
+		log.Fatalf("Error sending request: %v", err)
+	}
+
+	log.Printf("Response payload: %v", resp.Payload())
 }

@@ -2,9 +2,13 @@ package main
 
 import (
   "os"
+  "time"
+  "context"
   "github.com/gologme/log"
   "github.com/yggdrasil-network/yggdrasil-go/src/config"
   "github.com/yggdrasil-network/yggdrasil-go/src/yggdrasil"
+  coap "github.com/Fnux/go-coap"
+  coapNet "github.com/Fnux/go-coap/net"
 )
 
 // Defines an Yggdrasil node.
@@ -23,6 +27,18 @@ func initLocalNode() node {
   return n
 }
 
+func handleA(w coap.ResponseWriter, req *coap.Request) {
+	log.Printf("Got message in handleA: path=%q: %#v from %v", req.Msg.Path(), req.Msg, req.Client.RemoteAddr())
+	w.SetContentFormat(coap.TextPlain)
+	log.Printf("Transmitting from A")
+	ctx, cancel := context.WithTimeout(req.Ctx, time.Second)
+	defer cancel()
+	if _, err := w.WriteWithContext(ctx, []byte("hello world")); err != nil {
+		log.Printf("Cannot send response: %v", err)
+	}
+}
+
+/*
 func handleIncomingConn(n node, conn *yggdrasil.Conn) {
   buf := make([]byte, 65535)
   count, err := conn.Read(buf)
@@ -38,6 +54,7 @@ func handleIncomingConn(n node, conn *yggdrasil.Conn) {
     n.log.Errorln("Error closing connection.")
   }
 }
+*/
 
 func main() {
   var err error
@@ -66,6 +83,7 @@ func main() {
 
   n.log.Println("Local address ", n.core.Address().String())
 
+  /*
   // Accept incoming transmissions.
   listener, err := n.core.ConnListen()
   if err != nil {
@@ -84,4 +102,12 @@ func main() {
 
    go handleIncomingConn(n, conn)
   }
+  */
+
+  // Coap Server
+  mux := coap.NewServeMux()
+	mux.Handle("/a", coap.HandlerFunc(handleA))
+
+	yggdrasilCoapNode := coapNet.YggdrasilNode{ Core: n.core, Config: n.config }
+	log.Fatal(coap.ListenAndServeYggdrasil(yggdrasilCoapNode, mux))
 }
