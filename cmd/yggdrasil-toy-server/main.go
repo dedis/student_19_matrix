@@ -36,13 +36,14 @@ func serveCoap(node coapNet.YggdrasilNode, logger *log.Logger) {
 	logger.Fatal(coap.ListenAndServeYggdrasil(node, mux))
 }
 
-func handleDebugConn(conn net.Conn) {
+func handleDebugConn(conn net.Conn, logger *log.Logger) {
 	buf := make([]byte, 65535)
 	r, err := conn.Read(buf)
 	if err != nil {
 		panic(err)
 	} else {
-		fmt.Println(r)
+		logger.Println("Read", r, "bytes from network." )
+		fmt.Println(buf)
 	}
 
 	// Close connection for now, although it could be reused.
@@ -63,7 +64,7 @@ func serveDebug(node coapNet.YggdrasilNode, logger *log.Logger) {
 			logger.Errorln("Failed to accept incoming transmission: %v", err)
 		}
 
-		go handleDebugConn(conn)
+		go handleDebugConn(conn, logger)
 	}
 }
 
