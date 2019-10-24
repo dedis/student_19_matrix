@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"net"
 	"os"
 	"time"
 
@@ -28,6 +29,43 @@ func handleA(w coap.ResponseWriter, req *coap.Request) {
 	}
 }
 
+func serveCoap(node coapNet.YggdrasilNode, logger *log.Logger) {
+	mux := coap.NewServeMux()
+	mux.Handle("/a", coap.HandlerFunc(handleA))
+	logger.Fatal(coap.ListenAndServeYggdrasil(node, mux))
+}
+
+func handleDebugConn(conn net.Conn) {
+	buf := make([]byte, 65535)
+	r, err := conn.Read(buf)
+	if err != nil {
+		panic(err)
+	} else {
+		fmt.Println(r)
+	}
+
+	// Close connection for now, although it could be reused.
+	conn.Close()
+}
+
+func serveDebug(node *coapNet.YggdrasilNode, logger *log.Logger) {
+	listener, err := node.Core.ConnListen()
+	if err != nil {
+		logger.Fatal("Could not serve Yggdrasil.")
+		panic(err)
+	}
+
+	logger.Println("Waiting for incoming Yggdrasil connections.")
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			logger.Errorln("Failed to accept incoming transmission: %v", err)
+		}
+
+		go handleDebugConn(conn)
+	}
+}
+
 func main() {
 	// Handle command-line parameters
 	genconf := flag.Bool("genconf", false, "print a new config to stdout")
@@ -35,6 +73,7 @@ func main() {
 	useconffile := flag.String("useconffile", "", "read HJSON/JSON config from specified file path")
 	normaliseconf := flag.Bool("normaliseconf", false, "use in combination with either -useconf or -useconffile, outputs your configuration normalised")
 	confjson := flag.Bool("json", false, "print configuration from -genconf or -normaliseconf as JSON instead of HJSON")
+	debug := flag.Bool("debug", false, "dump incoming requests to the standard output")
 	flag.Parse()
 
 	var cfg *config.NodeConfig
@@ -88,14 +127,24 @@ func main() {
 	// Ignore state
 	_ = state
 
+	for len(node.Core.GetPeers()) < 2 {
+		logger.Println("Waiting for at least one active external peering...")
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	for _, peer := range node.Core.GetPeers() {
+		logger.Println("Active peering:", peer.Endpoint)
+	}
+
 	// Log some basic informations.
 	logger.Println("My node ID is", node.Core.NodeID())
 	logger.Println("My public key is", node.Core.EncryptionPublicKey())
-	logger.Println("My coords are", node.Core.Coords())
-	logger.Println("Local address ", node.Core.Address().String())
+	logger.Println("My coords are:", node.Core.Coords())
+	logger.Println("Local address:", node.Core.Address().String())
 
-	// Launch Coap Server
-	mux := coap.NewServeMux()
-	mux.Handle("/a", coap.HandlerFunc(handleA))
-	logger.Fatal(coap.ListenAndServeYggdrasil(node, mux))
+	if *debug {
+		serveDebug(&node, logger)
+	} else {
+		serveCoap(node, logger)
+	}
 }
