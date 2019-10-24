@@ -12,6 +12,7 @@ import (
 	"github.com/gologme/log"
 	"github.com/hjson/hjson-go"
 	"github.com/yggdrasil-network/yggdrasil-go/src/config"
+	"github.com/yggdrasil-network/yggdrasil-go/src/yggdrasil"
 
 	coap "github.com/Fnux/go-coap"
 	coapNet "github.com/Fnux/go-coap/net"
@@ -48,7 +49,7 @@ func handleDebugConn(conn net.Conn) {
 	conn.Close()
 }
 
-func serveDebug(node *coapNet.YggdrasilNode, logger *log.Logger) {
+func serveDebug(node coapNet.YggdrasilNode, logger *log.Logger) {
 	listener, err := node.Core.ConnListen()
 	if err != nil {
 		logger.Fatal("Could not serve Yggdrasil.")
@@ -116,6 +117,7 @@ func main() {
 
 	// Initialize Yggdrasil node
 	node := coapNet.YggdrasilNode{
+		Core: &yggdrasil.Core{},
 		Config: cfg,
 	}
 	state, err = node.Core.Start(node.Config, logger)
@@ -143,7 +145,7 @@ func main() {
 	logger.Println("Local address:", node.Core.Address().String())
 
 	if *debug {
-		serveDebug(&node, logger)
+		serveDebug(node, logger)
 	} else {
 		serveCoap(node, logger)
 	}
