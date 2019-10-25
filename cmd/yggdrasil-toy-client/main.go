@@ -11,6 +11,7 @@ import (
 	"github.com/gologme/log"
 	"github.com/hjson/hjson-go"
 	"github.com/yggdrasil-network/yggdrasil-go/src/config"
+	"github.com/yggdrasil-network/yggdrasil-go/src/yggdrasil"
 
 	coap "github.com/Fnux/go-coap"
 	coapNet "github.com/Fnux/go-coap/net"
@@ -70,6 +71,7 @@ func main() {
 
 	// Initialize Yggdrasil node
 	node := coapNet.YggdrasilNode{
+		Core: &yggdrasil.Core{},
 		Config: cfg,
 	}
 	state, err = node.Core.Start(node.Config, logger)
@@ -80,6 +82,15 @@ func main() {
 
 	// Ignore state
 	_ = state
+
+	for len(node.Core.GetPeers()) < 2 {
+		logger.Println("Waiting for at least one active external peering...")
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	for _, peer := range node.Core.GetPeers() {
+		logger.Println("Active peering:", peer.Endpoint)
+	}
 
 	// Log some basic informations.
 	logger.Println("My node ID is:", node.Core.NodeID())
