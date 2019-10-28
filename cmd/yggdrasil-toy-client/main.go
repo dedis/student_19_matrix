@@ -18,6 +18,23 @@ import (
 	toyNodes "git.sr.ht/~fnux/yggdrasil-toy-nodes"
 )
 
+func get(node coapNet.YggdrasilNode, targetAddr string, log *log.Logger) {
+	co, err := coap.DialYggdrasil(node, targetAddr)
+	if err != nil {
+		log.Fatalf("Error dialing: %v", err)
+	}
+	path := "/a"
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	resp, err := co.GetWithContext(ctx, path)
+
+	if err != nil {
+		log.Fatalf("Error sending request: %v", err)
+	}
+
+	log.Printf("Response payload: %v", resp.Payload())
+}
+
 func main() {
 	// Handle command-line parameters
 	genconf := flag.Bool("genconf", false, "print a new config to stdout")
@@ -99,19 +116,6 @@ func main() {
 	logger.Println("Local address:", node.Core.Address().String())
 	logger.Println("Target address:", *targetAddr)
 
-	// TODO: cleanup below this comment!
-	co, err := coap.DialYggdrasil(node, *targetAddr)
-	if err != nil {
-		log.Fatalf("Error dialing: %v", err)
-	}
-	path := "/a"
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-	resp, err := co.GetWithContext(ctx, path)
-
-	if err != nil {
-		log.Fatalf("Error sending request: %v", err)
-	}
-
-	log.Printf("Response payload: %v", resp.Payload())
+	// Query
+	get(node, *targetAddr, logger)
 }
