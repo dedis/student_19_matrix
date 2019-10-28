@@ -105,9 +105,6 @@ func main() {
 		log.Fatalf("Error dialing: %v", err)
 	}
 	path := "/a"
-	if len(os.Args) > 1 {
-		path = os.Args[1]
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	resp, err := co.GetWithContext(ctx, path)
