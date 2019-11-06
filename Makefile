@@ -1,19 +1,24 @@
 SERVER=yggdrasil-toy-server
 CLIENT=yggdrasil-toy-client
+PROXY=yggdrasil-http-proxy
 
 all: build
 
-build: server client
+build: server client proxy
 
 getDeps:
-	(cd cmd/yggdrasil-toy-server; go get -v)
-	(cd cmd/yggdrasil-toy-client; go get -v)
+	(cd cmd/$(CLIENT); go get -v)
+	(cd cmd/$(SERVER); go get -v)
+	(cd cmd/$(PROXY); go get -v)
 
 server:
 	go build -o $(SERVER) cmd/$(SERVER)/main.go
 
 client:
 	go build -o $(CLIENT) cmd/$(CLIENT)/main.go
+
+proxy:
+	go build -o $(PROXY) cmd/$(PROXY)/main.go
 
 clean:
 	rm -f $(SERVER) $(CLIENT)
