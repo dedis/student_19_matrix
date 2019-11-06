@@ -18,7 +18,7 @@ client:
 	go build -o $(CLIENT) cmd/$(CLIENT)/main.go
 
 proxy:
-	go build -o $(PROXY) cmd/$(PROXY)/main.go
+	go build -o $(PROXY) cmd/$(PROXY)/*.go
 
 clean:
 	rm -f $(SERVER) $(CLIENT)
