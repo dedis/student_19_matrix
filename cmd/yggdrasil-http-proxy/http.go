@@ -27,6 +27,8 @@ type handler struct{}
 //   * Convert the response back into normal HTTP
 //   * Returns it to the original sender
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+
+	// ???
 	if r.Method == "OPTIONS" {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Headers", "content-type,authorization")
@@ -34,13 +36,16 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Extract Path and Body
 	path := r.URL.Path
 	logDebug("HTTP: Got request on path %s", r.URL.Path)
-
 	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		logDebug(err)
+	}
 
-	// Unmarshal request body JSON
-	var decodedBody interface{}
+	// Check content-type and unmarshal body
+	var coapBody interface{};
 	if len(body) > 0 {
 		contentType := r.Header.Get("content-type")
 		logDebug("Got request with content type: %s", contentType)
@@ -51,7 +56,8 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		decodedBody = decodeJSON(body)
+		// Unmarshal JSON body
+		coapBody = decodeJSON(body)
 	}
 
 	// Add authentication header to query parameters of CoAP request
@@ -81,7 +87,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Send the CoAP request to another instance of the CoAP proxy and receive a
 	// response.
 	method := "GET" // FIXME
-	pl, statusCode, err := sendCoAPRequest(method, r.Host, path, decodedBody, origin)
+	pl, statusCode, err := sendCoAPRequest(method, r.Host, path, coapBody, origin)
 	if err != nil {
 		logError("Failed to transmit CoAP request", err)
 		return

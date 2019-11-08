@@ -44,6 +44,7 @@ func ServeCOAP(w coap.ResponseWriter, req *coap.Request) {
 	logDebug("COAP options %v", req.Msg.AllOptions())
 
 	// Encode the raw payload into JSON
+	// FIXME: uncompress!
 	body := encodeJSON(pl)
 
 	// Send an HTTP request to a homeserver and receive a response
@@ -118,9 +119,10 @@ func sendCoAPRequest(method, host, path string, body interface{},
 		"DELETE": coap.DELETE,
 	}
 
-	// Convert JSON to raw
+	// Convert JSON structure to raw bytes.
 	var bodyBytes []byte
 	if body != nil {
+		// FIXME: Compression!
 		bodyBytes = encodeJSON(body)
 	}
 
