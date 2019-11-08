@@ -23,6 +23,7 @@ var (
 	httpTarget   = flag.String("http-target", "http://127.0.0.1:8008", "Force the host+port of the HTTP server to talk to")
 	coapPort     = flag.String("coap-port", "5683", "The CoAP port to listen on")
 	coapBindHost = flag.String("coap-bind-host", "0.0.0.0", "The COAP host to listen on")
+	httpBindHost = flag.String("http-bind-host", "0.0.0.0", "The HTTP host to listen on")
 	httpPort     = flag.String("http-port", "8888", "The HTTP port to listen on")
 )
 
@@ -102,7 +103,7 @@ func main() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			httpAddr := "0.0.0.0:" + *httpPort
+			httpAddr := *httpBindHost + *httpPort
 			log.Printf("Setting up HTTP to CoAP proxy on %s", httpAddr)
 			log.Println(http.ListenAndServe(httpAddr, httpRecoverWrap(h)))
 			log.Println("HTTP to CoAP proxy exited")
