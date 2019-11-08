@@ -93,6 +93,10 @@ func sendCoAPRequest(
 
 	// TODO: open connection to remote proxy
 	c, err := coap.Dial("udp", target)
+	if err != nil {
+		logger.Println("Could not open CoAP tunnel")
+		return
+	}
 	defer c.Close()
 
 	// If there is an existing connection, use it, otherwise provision a new one
@@ -123,7 +127,7 @@ func sendCoAPRequest(
 
 	var bodyBytes []byte
 	if body != nil {
-		bodyBytes = body.([]byte)
+		bodyBytes = encodeJSON(body)
 	}
 
 	logger.Println("Sending %d bytes in compressed payload", len(bodyBytes))

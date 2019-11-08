@@ -23,7 +23,6 @@ func encodeJSON(val interface{}) []byte {
 	if err != nil {
 		panic(err)
 	}
-
 	return b.Bytes()
 
 	// TODO: We allocate a buffer with a len(pl)*2 capacity to ensure our buffer

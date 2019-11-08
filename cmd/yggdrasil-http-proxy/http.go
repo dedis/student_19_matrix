@@ -13,19 +13,20 @@ import (
 // Client for outbound HTTP requests to homeservers
 var httpClient = &http.Client{}
 
+// ???
 var fedAuthPrefix = "X-Matrix origin="
 var fedAuthSuffix = ",key=\"\",sig=\"\""
 
-// handler is a struct that acts as an http.Handler, where its ServeHTTP method is used to handle HTTP requests
+// handler is a struct that acts as an http.Handler, where its ServeHTTP method
+// is used to handle HTTP requests
 type handler struct{}
 
 // ServeHTTP is a function implemented on handler which handles HTTP requests.
 // It:
 //   * Takes in an HTTP request
-//   * Compresses the path, query parameters and body if possible
-//   * Creates a CoAP request with carried over and compressed headers, path, body etc.
+//   * Creates a CoAP request with carried over and headers, path, body etc.
 //   * Sends the CoAP request to another proxy, retrieves the response
-//   * Decompresses the response back into normal HTTP
+//   * Convert the response back into normal HTTP
 //   * Returns it to the original sender
 func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "OPTIONS" {
@@ -117,8 +118,10 @@ func sendHTTPRequest(
 
 	// Create the request
 	url := fmt.Sprintf("%s%s", *httpTarget, path)
+	logger.Println(url)
 	hReq, err := http.NewRequest(strings.ToUpper(method), url, bytes.NewReader(payload))
 	if err != nil {
+		logger.Println("Err preparing HTTP request", err)
 		return
 	}
 
@@ -131,12 +134,14 @@ func sendHTTPRequest(
 	// Perform the request and receive the response
 	hRes, err := httpClient.Do(hReq)
 	if err != nil {
+		logger.Println("Err performing HTTP request", err)
 		return
 	}
 
 	// Receive the response body
 	resBody, err = ioutil.ReadAll(hRes.Body)
 	if err != nil {
+		logger.Println("Err extracting HTTP body", err)
 		return
 	}
 

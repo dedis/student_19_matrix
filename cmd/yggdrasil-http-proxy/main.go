@@ -103,7 +103,7 @@ func main() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			httpAddr := *httpBindHost + *httpPort
+			httpAddr := *httpBindHost + ":" + *httpPort
 			log.Printf("Setting up HTTP to CoAP proxy on %s", httpAddr)
 			log.Println(http.ListenAndServe(httpAddr, httpRecoverWrap(h)))
 			log.Println("HTTP to CoAP proxy exited")
@@ -114,8 +114,9 @@ func main() {
 
 	// Close all open CoAP connections on program termination
 	for _, c := range conns {
-		if err := (*c).Close(); err != nil {
-			panic(err)
-		}
+		_ = c
+		//if err := (*c).Close(); err != nil {
+		//	panic(err)
+		//}
 	}
 }
