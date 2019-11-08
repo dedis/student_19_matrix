@@ -86,8 +86,7 @@ func (h *handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Send the CoAP request to another instance of the CoAP proxy and receive a
 	// response.
-	method := "GET" // FIXME
-	pl, statusCode, err := sendCoAPRequest(method, r.Host, path, coapBody, origin)
+	pl, statusCode, err := sendCoAPRequest(r.Method, r.Host, path, coapBody, origin)
 	if err != nil {
 		logError("Failed to transmit CoAP request", err)
 		return

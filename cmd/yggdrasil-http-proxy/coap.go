@@ -20,7 +20,7 @@ func ServeCOAP(w coap.ResponseWriter, req *coap.Request) {
 	m := req.Msg
 	pl := m.Payload()
 	path := m.PathString()
-	method := "GET" // FIXME
+	method := m.Code().String()
 
 	if !m.IsConfirmable() {
 		logDebug("Got unconfirmable message")
