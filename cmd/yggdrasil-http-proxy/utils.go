@@ -1,11 +1,11 @@
 package main
 
 import (
-	//"encoding/json"
 	"github.com/ugorji/go/codec"
 	"time"
 	"math/rand"
 	"bytes"
+	"log"
 )
 
 var (
@@ -24,14 +24,6 @@ func encodeJSON(val interface{}) []byte {
 		panic(err)
 	}
 	return b.Bytes()
-
-	// TODO: We allocate a buffer with a len(pl)*2 capacity to ensure our buffer
-	// can contain all of the JSON data (as len(jsonData) > len(cborData)). This
-	// is far from being the most optimised way to do it, and a more efficient
-	// way of computing the maximum size of the buffer to should be
-	// investigated.
-	// jsn = jsn.Reset(make([]byte, 0, len(pl)*2))
-	// return cbr.Reset(pl).Tojson(jsn).Bytes()
 }
 
 // Decode takes a JSON byte array and produces a golang object
@@ -46,15 +38,21 @@ func decodeJSON(pl []byte) interface{} {
 	}
 
 	return val
-
-	// TODO: Same as above. For some reason it also blows up in some cases on
-	// the JSON->CBOR way if the allocated buffer is smaller than the payload.
-	// cbr = cbr.Reset(make([]byte, 0, len(pl)*2))
-	// return jsn.Reset(pl).Tocbor(cbr)
 }
 
 func randSlice(n int) []byte {
 	token := make([]byte, n)
 	r1.Read(token)
 	return token
+}
+
+func logDebug(v ...interface{}) {
+	debug := true // FIXME: read from CLI arguments
+	if (debug) {
+		log.Println("[Debug]", v)
+	}
+}
+
+func logError(v ...interface{}) {
+	log.Println("Error]", v)
 }

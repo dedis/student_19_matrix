@@ -14,9 +14,12 @@ import (
 )
 
 var (
+	// Generic variables
 	err error
 	logger *log.Logger
+	conns = make(map[string]*net.Conn)
 
+	// CLI Arguments
 	onlyCoAP     = flag.Bool("only-coap", false, "Only proxy CoAP requests to HTTP and not the other way around")
 	onlyHTTP     = flag.Bool("only-http", false, "Only proxy HTTP requests to CoAP and not the other way around")
 	coapTarget   = flag.String("coap-target", "", "Force the host+port of the CoAP server to talk to")
@@ -73,19 +76,19 @@ func coapRecoverWrap(h coap.Handler) coap.Handler {
 }
 
 func main() {
-	// CLI arguments.
+	// Parse CLI arguments;
 	flag.Parse()
 
-	// Initialization
-	conns := make(map[string]*net.Conn)
+	// Initialize logger.
 	logger = log.New(os.Stdout, "", log.Flags())
 
-	// Create a wait group to keep main routine alive while HTTP and CoAP servers run in separate routines
+	// Create a wait group to keep main routine alive while HTTP and CoAP servers
+	// run in separate routines.
 	wg := sync.WaitGroup{}
 	var h *handler
 
-	// Start CoAP listener
-	// Listens for CoAP requests and sends out HTTP
+	// Start CoAP listener.
+	// Listens for CoAP requests and sends out HTTP.
 	if !*onlyHTTP {
 		wg.Add(1)
 		go func() {
@@ -97,14 +100,14 @@ func main() {
 		}()
 	}
 
-	// Start HTTP listener
-	// Listens for HTTP requests and sends out CoAP
+	// Start HTTP listener.
+	// Listens for HTTP requests and sends out CoAP.
 	if !*onlyCoAP {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			httpAddr := *httpBindHost + ":" + *httpPort
-			log.Printf("Setting up HTTP to CoAP proxy on %s", httpAddr)
+			log.Println("Setting up HTTP to CoAP proxy on %s", httpAddr)
 			log.Println(http.ListenAndServe(httpAddr, httpRecoverWrap(h)))
 			log.Println("HTTP to CoAP proxy exited")
 		}()
@@ -112,11 +115,11 @@ func main() {
 
 	wg.Wait()
 
-	// Close all open CoAP connections on program termination
+	// Close all open CoAP connections on program termination.
 	for _, c := range conns {
 		_ = c
-		//if err := (*c).Close(); err != nil {
-		//	panic(err)
-		//}
+		if err := (*c).Close(); err != nil {
+			logError(err)
+		}
 	}
 }

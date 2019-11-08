@@ -1,9 +1,7 @@
 package main
 
 import (
-	"context"
 	"errors"
-	"log"
 	"strings"
 
 	"github.com/Fnux/go-coap"
@@ -19,20 +17,19 @@ import (
 //   * Compresses the response
 //   * Returns it over CoAP to the requester
 func ServeCOAP(w coap.ResponseWriter, req *coap.Request) {
-	ctx := context.Background()
 	m := req.Msg
 	pl := m.Payload()
 	path := m.PathString()
 	method := "GET" // FIXME
 
 	if !m.IsConfirmable() {
-		log.Printf("Got unconfirmable message")
+		logDebug("Got unconfirmable message")
 		return
 	}
 
-	logger.Println("CoAP - %X: Got request on path %s", req.Msg.Token(), path)
+	logDebug("CoAP - %X: Got request on path %s", req.Msg.Token(), path)
 
-	// Extract Query
+	// Extract Query (???)
 	var query string
 	s := strings.Split(path, "?")
 	if len(s) > 1 {
@@ -43,41 +40,36 @@ func ServeCOAP(w coap.ResponseWriter, req *coap.Request) {
 	}
 	_ = query
 
-	// Get decompressed path and query parameters from the request
-	logger.Println("CoAP - %X: Sending HTTP request", req.Msg.Token())
-	logger.Println("COAP options %v", req.Msg.AllOptions())
+	logDebug("CoAP - %X: Sending HTTP request", req.Msg.Token())
+	logDebug("COAP options %v", req.Msg.AllOptions())
 
 	// Encode the raw payload into JSON
 	body := encodeJSON(pl)
 
 	// Send an HTTP request to a homeserver and receive a response
-	pl, statusCode, err := sendHTTPRequest(
-		ctx,
-		method,
-		path,
-		body,
-		"", // origin
-	)
-	_ = err
+	origin := "" // FIXME
+	pl, statusCode, err := sendHTTPRequest(method, path, body, origin)
+	if err != nil {
+		logError("Failed to sent HTTP request", err)
+		return
+	}
 
-	logger.Println("CoAP - %X: Got status %d", req.Msg.Token(), statusCode)
-	logger.Println("CoAP - %X: Sending response", req.Msg.Token())
+	logDebug("CoAP - %X: Got status %d", req.Msg.Token(), statusCode)
+	logDebug("CoAP - %X: Sending response", req.Msg.Token())
 
 	// Convert the receive HTTP status code to a CoAP one and add to response
 	w.SetCode(statusHTTPToCoAP(statusCode))
 
-	// Re-encode the JSON body into CBOR and write out
-	if len(pl) > 0 {
-		pl = pl
-
-		w.SetContentFormat(coap.AppOctets)
+	_, err = w.Write(pl)
+	if err != nil {
+			logError("Failed to return over CoAP", err)
+			return
 	}
 }
 
 // sendCoAPRequest is a function that sends a CoAP request to another instance
 // of the CoAP proxy.
-func sendCoAPRequest(
-	ctx context.Context, method, host, path string, body interface{},
+func sendCoAPRequest(method, host, path string, body interface{},
 	origin *string,
 ) (payload []byte, statusCode coap.COAPCode, err error) {
 
@@ -89,9 +81,9 @@ func sendCoAPRequest(
 		target = host + ":" + *coapPort
 	}
 
-	logger.Println("Proxying request to %s", target)
+	logDebug("Proxying request to %s", target)
 
-	// TODO: open connection to remote proxy
+	// Open connection to remote.
 	c, err := coap.Dial("udp", target)
 	if err != nil {
 		logger.Println("Could not open CoAP tunnel")
@@ -99,7 +91,8 @@ func sendCoAPRequest(
 	}
 	defer c.Close()
 
-	// If there is an existing connection, use it, otherwise provision a new one
+	// FIXME: If there is an existing connection, use it, otherwise provision a
+	// new one.
 	/*
 	if c, exists = conns[target]; !exists || (c != nil && c.dead) {
 		logger.Println("No usable connection to %s, initiating a new one", target)
@@ -117,7 +110,7 @@ func sendCoAPRequest(
 	}
 	*/
 
-	// Map for translating HTTP method codes to CoAP
+	// Map for translating HTTP method codes to CoAP.
 	methodCodes := map[string]coap.COAPCode{
 		"GET":    coap.GET,
 		"POST":   coap.POST,
@@ -125,12 +118,13 @@ func sendCoAPRequest(
 		"DELETE": coap.DELETE,
 	}
 
+	// Convert JSON to raw
 	var bodyBytes []byte
 	if body != nil {
 		bodyBytes = encodeJSON(body)
 	}
 
-	logger.Println("Sending %d bytes in compressed payload", len(bodyBytes))
+	logDebug("Sending %d bytes in payload", len(bodyBytes))
 
 	// Create a new CoAP request
 	req := c.NewMessage(coap.MessageParams{
@@ -143,20 +137,20 @@ func sendCoAPRequest(
 
 	if len(path) > 250 {
 		// We can't send long paths, so lets bail out here
-		err = errors.New("Path too long: " + path)
+		err = errors.New("Path too long, Ignoring request: " + path)
 		return
 	}
 
 	req.SetPathString(path)
-	log.Printf("HTTP: Sending CoAP request with token %X (path: %v)", req.Token(), path)
+	logDebug("HTTP: Sending CoAP request with token %X (path: %v)", req.Token(), path)
 
 	// Send the CoAP request and receive a response
-	logger.Println("opts %v", req.AllOptions())
+	logDebug("opts %v", req.AllOptions())
 	res, err := c.Exchange(req)
 
 	// Check for errors
 	if err != nil {
-		log.Printf("Closing CoAP connection because of error: %v", err)
+		logError("Closing CoAP connection because of error: %v", err)
 
 		/*
 		if c, err = resetConn(target); err != nil {
@@ -165,17 +159,15 @@ func sendCoAPRequest(
 		*/
 
 		if res, err = c.Exchange(req); err != nil {
-			log.Printf("HTTP failed to exchange coap: %v", err)
+			logError("HTTP failed to exchange coap: %v", err)
 			return
 		}
 	}
 
-	// Receive and decompress the response payload
+	// Receive the response payload
 	rawPayload := res.Payload()
-	logger.Println("HTTP: Got response to CoAP request %X with %d bytes in response payload", res.Token(), len(rawPayload))
-
+	logDebug("HTTP: Got response to CoAP request %X with %d bytes in response payload", res.Token(), len(rawPayload))
 	pl := rawPayload
-	// logger.Println("Got %d bytes in response payload (%d decompressed)", len(rawPayload), len(pl))
 
 	// Keep track of the last successfully received message for connection timeout purposes
 	//c.lastMsg = time.Now()
