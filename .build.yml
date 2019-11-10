@@ -1,14 +1,13 @@
-image: fedora/latest
+image: fedora/31
 packages:
   - golang-bin
 sources:
-  - https://git.sr.ht/~fnux/yggdrasil-toy-nodes
+  - https://git.sr.ht/~fnux/yggdrasil-http-proxy
 environment:
   GOPATH: /tmp/go
   GOBIN: /tmp/go/bin
 tasks:
   - build: |
-      cd yggdrasil-toy-nodes
+      cd yggdrasil-http-proxy
       make getDeps
-      make client
-      make server
+      make build
