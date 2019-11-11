@@ -78,16 +78,15 @@ func sendCoAPRequest(method, host, path string, body interface{},
 	if len(*coapTarget) > 0 {
 		target = *coapTarget
 	} else {
-		target = host + ":" + *coapPort
+		target = host
 	}
 
 	logDebug("Proxying request to %s", target)
 
 	// Open connection to remote.
-	c, err := coap.Dial("udp", target)
+	c, err := coap.DialYggdrasil(node, target)
 	if err != nil {
-		logger.Println("Could not open CoAP tunnel")
-		return
+		logError("Error dialing: %v", err)
 	}
 	defer c.Close()
 

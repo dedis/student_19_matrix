@@ -24,14 +24,13 @@ var (
 	err error
 	logger *log.Logger
 	conns = make(map[string]*net.Conn)
+	node coapNet.YggdrasilNode
 
 	// CLI Arguments
 	onlyCoAP     = flag.Bool("only-coap", false, "Only proxy CoAP requests to HTTP and not the other way around")
 	onlyHTTP     = flag.Bool("only-http", false, "Only proxy HTTP requests to CoAP and not the other way around")
 	coapTarget   = flag.String("coap-target", "", "Force the host+port of the CoAP server to talk to")
 	httpTarget   = flag.String("http-target", "http://127.0.0.1:8008", "Force the host+port of the HTTP server to talk to")
-	coapPort     = flag.String("coap-port", "5683", "The CoAP port to listen on")
-	coapBindHost = flag.String("coap-bind-host", "0.0.0.0", "The COAP host to listen on")
 	httpBindHost = flag.String("http-bind-host", "0.0.0.0", "The HTTP host to listen on")
 	httpPort     = flag.String("http-port", "8888", "The HTTP port to listen on")
 	useconf      = flag.Bool("useconf", false, "read HJSON/JSON config from stdin")
@@ -109,7 +108,7 @@ func main() {
 	}
 
 	// Initialize Yggdrasil node.
-	node := coapNet.YggdrasilNode{
+	node = coapNet.YggdrasilNode{
 		Core: &yggdrasil.Core{},
 		Config: cfg,
 	}
@@ -148,9 +147,8 @@ func main() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			coapAddr := *coapBindHost + ":" + *coapPort
-			log.Printf("Setting up CoAP to HTTP proxy on %s", coapAddr)
-			log.Println(listenAndServe(coapAddr, "udp", coapRecoverWrap(coap.HandlerFunc(ServeCOAP))))
+			log.Printf("Setting up CoAP to HTTP proxy on %s", node.Core.Address().String())
+			log.Println(coap.ListenAndServeYggdrasil(node, coap.HandlerFunc(ServeCOAP)))
 			log.Println("CoAP to HTTP proxy exited")
 		}()
 	}
