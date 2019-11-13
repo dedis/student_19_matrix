@@ -2,42 +2,9 @@ package main
 
 import (
 	"net/http"
-	"time"
 
 	"github.com/Fnux/go-coap"
 )
-
-// listenAndServe is a function that wraps around a CoAP server with a
-// specialised configuration and asks it to listen on the given address and
-// port.
-func listenAndServe(addr string, network string, handler coap.Handler) error {
-	blockWiseTransfer := true
-	blockWiseTransferSzx := coap.BlockWiseSzx1024
-	server := &coap.Server{
-		Addr:                 addr,
-		Net:                  network,
-		Handler:              handler,
-		BlockWiseTransfer:    &blockWiseTransfer,
-		BlockWiseTransferSzx: &blockWiseTransferSzx,
-		MaxMessageSize:       ^uint32(0),
-	}
-	return server.ListenAndServe()
-}
-
-// dialTimeout is a function that dials (connects to) a CoAP server as a CoAP
-// client and times out on a given timeout.Duration.
-func dialTimeout(network, address string, timeout time.Duration) (*coap.ClientConn, error) {
-	blockWiseTransfer := true
-	blockWiseTransferSzx := coap.BlockWiseSzx1024
-	client := coap.Client{
-		Net:                  network,
-		DialTimeout:          timeout,
-		BlockWiseTransfer:    &blockWiseTransfer,
-		BlockWiseTransferSzx: &blockWiseTransferSzx,
-		MaxMessageSize:       ^uint32(0),
-	}
-	return client.Dial(address)
-}
 
 // statusCoAPToHTTP is a function that converts a CoAP status code to its
 // equivalent HTTP status code.
