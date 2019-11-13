@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"runtime/debug"
 	"sync"
-	"net"
 	"time"
 	"fmt"
 
@@ -23,7 +22,6 @@ var (
 	// Generic variables
 	err error
 	logger *log.Logger
-	conns = make(map[string]*net.Conn)
 	node coapNet.YggdrasilNode
 
 	// CLI Arguments

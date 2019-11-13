@@ -84,30 +84,11 @@ func sendCoAPRequest(method, host, path string, body interface{},
 	logDebug("Proxying request to %s", target)
 
 	// Open connection to remote.
-	c, err := coap.DialYggdrasil(node, target)
+	c, err := dial(target)
 	if err != nil {
 		logError("Error dialing: %v", err)
+		return
 	}
-	defer c.Close()
-
-	// FIXME: If there is an existing connection, use it, otherwise provision a
-	// new one.
-	/*
-	if c, exists = conns[target]; !exists || (c != nil && c.dead) {
-		logger.Println("No usable connection to %s, initiating a new one", target)
-		if c, err = resetConn(target); err != nil {
-			return
-		}
-		// } else if time.Now().Add(-180 * time.Second).After(c.lastMsg) {
-		// 	// Reset an existing connection if the latest message sent is older than
-		// 	// go-coap's syncTimeout.
-		// 	if c, err = resetConn(target); err != nil {
-		// 		return
-		// 	}
-	} else if exists {
-		logger.Println("Reusing existing connection to %s", target)
-	}
-	*/
 
 	// Map for translating HTTP method codes to CoAP.
 	methodCodes := map[string]coap.COAPCode{
@@ -126,13 +107,14 @@ func sendCoAPRequest(method, host, path string, body interface{},
 	logDebug("Sending %d bytes in payload", len(bodyBytes))
 
 	// Create a new CoAP request
-	req := c.NewMessage(coap.MessageParams{
+	msg := coap.MessageParams{
 		Type:      coap.Confirmable,
 		Code:      methodCodes[strings.ToUpper(method)],
 		MessageID: uint16(r1.Intn(100000)),
 		Token:     randSlice(2),
 		Payload:   bodyBytes,
-	})
+	}
+	req := c.NewMessage(msg)
 
 	if len(path) > 250 {
 		// We can't send long paths, so lets bail out here
