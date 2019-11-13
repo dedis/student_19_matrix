@@ -99,7 +99,7 @@ func main() {
 	case *useconffile != "" || *useconf:
 		// Read the configuration from either stdin or from the filesystem
 		normaliseconf := false
-		cfg = ReadConfig(useconf, useconffile, &normaliseconf)
+		cfg = readConfig(useconf, useconffile, &normaliseconf)
 	default:
 		flag.PrintDefaults()
 		return

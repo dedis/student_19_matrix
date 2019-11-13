@@ -15,7 +15,7 @@ import (
 // README: Most of this code comes from:
 // https://github.com/yggdrasil-network/yggdrasil-go/blob/master/cmd/yggdrasil/main.go
 
-func ReadConfig(useconf *bool, useconffile *string, normaliseconf *bool) *config.NodeConfig {
+func readConfig(useconf *bool, useconffile *string, normaliseconf *bool) *config.NodeConfig {
 	// Use a configuration file. If -useconf, the configuration will be read
 	// from stdin. If -useconffile, the configuration will be read from the
 	// filesystem.
